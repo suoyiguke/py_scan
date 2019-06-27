@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 import sys
 
+from apscheduler.schedulers.blocking import BlockingScheduler
+
 import logger
 log = logger.logger()
 log.debug('=================扫描程序开始==========================')
@@ -28,15 +30,19 @@ if 'scan_url' in os.environ and  'scan_access_token' in os.environ:
     access_token = os.environ['scan_access_token']
 else:
     with open('./config.yml', 'r', encoding="utf-8") as f:
-         ymlFile = yaml.load(f.read(), Loader=yaml.FullLoader)
+        ymlFile = yaml.load(f.read(), Loader=yaml.FullLoader)
     url = ymlFile['scan_url']
     access_token = ymlFile['scan_access_token']
+
+pageUrl = 'http://{url}/'.format(url=url)  # 需要查询的页面
 
 # 初始化机器人小丁
 webhook = 'https://oapi.dingtalk.com/robot/send?access_token={access_token}'.format(access_token=access_token)  # 填写你自己创建的机器人
 xiaoding = DingtalkChatbot(webhook)
 localList = []
 historySet = set()
+
+
 try:
     browser = webdriver.Remote(
         command_executor="http://chrome:4444/wd/hub",
@@ -120,15 +126,20 @@ def _remove_duplicate( dict_list):
     return new_dict_list
 
 
-
-
-
-if __name__ == '__main__':
-    pageUrl = 'http://{url}/'.format(url=url)  # 需要查询的页面
+def main():
     object = {}
     object['refer'] = ''
     object['cur'] = pageUrl
     lis = send_url_verification(object)
-    browser.quit()
+    # browser.quit()
     log.debug('=================扫描程序结束==========================')
+
+
+
+if __name__ == '__main__':
+    sched = BlockingScheduler()
+    #4小时
+    main()
+    sched.add_job(main,'interval',  seconds=14400)
+    sched.start()
 
