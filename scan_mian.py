@@ -77,7 +77,7 @@ def get_html(object):
 def send_url_verification(object):
     # 只扫描自己的域名
     if object['cur'].find(url) != -1:
-        log.debug('扫描'+object['cur']+'中...')
+        log.debug('扫描'+object['cur']+'中...'+'它的来源是'+ object['refer'])
         soup = get_html(object)
         aList = soup.select("a[href]")
         linkList = list()
