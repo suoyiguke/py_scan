@@ -1,4 +1,10 @@
 # -*- coding: utf-8 -*-
+import sys
+
+import logger
+log = logger.logger()
+log.debug('=================扫描程序开始==========================')
+sys.setrecursionlimit(1000000)
 
 import requests
 import yaml
@@ -6,6 +12,7 @@ from bs4 import BeautifulSoup
 from dingtalkchatbot.chatbot import DingtalkChatbot
 from gevent import os
 from selenium import webdriver
+from selenium.webdriver import DesiredCapabilities
 
 global pageURL
 global localList
@@ -17,6 +24,7 @@ global url
 global access_token
 
 if 'scan_url' in os.environ and  'scan_access_token' in os.environ:
+    url = os.environ['scan_url']
     access_token = os.environ['scan_access_token']
 else:
     with open('./config.yml', 'r', encoding="utf-8") as f:
@@ -29,7 +37,18 @@ webhook = 'https://oapi.dingtalk.com/robot/send?access_token={access_token}'.for
 xiaoding = DingtalkChatbot(webhook)
 localList = []
 historySet = set()
-browser = webdriver.Chrome()
+try:
+    browser = webdriver.Remote(
+        command_executor="http://chrome:4444/wd/hub",
+        desired_capabilities=DesiredCapabilities.CHROME
+    )
+except BaseException as err:
+    log.error(err)
+    browser = webdriver.Chrome()
+
+finally:
+    log.error('请检查好Chrome环境！')
+
 
 
 # 不显示浏览器窗口的自动化爬取
@@ -52,7 +71,7 @@ def get_html(object):
 def send_url_verification(object):
     # 只扫描自己的域名
     if object['cur'].find(url) != -1:
-
+        log.debug('扫描'+object['cur']+'中...')
         soup = get_html(object)
         aList = soup.select("a[href]")
         linkList = list()
@@ -111,4 +130,5 @@ if __name__ == '__main__':
     object['cur'] = pageUrl
     lis = send_url_verification(object)
     browser.quit()
-    print("退出程序")
+    log.debug('=================扫描程序结束==========================')
+
