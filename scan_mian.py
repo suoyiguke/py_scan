@@ -1,24 +1,31 @@
 # -*- coding: utf-8 -*-
 
-import time
-from threading import Thread
-from urllib import parse
-from urllib.parse import urljoin
-
-import chardet
 import requests
+import yaml
 from bs4 import BeautifulSoup
 from dingtalkchatbot.chatbot import DingtalkChatbot
+from gevent import os
 from selenium import webdriver
 
 global pageURL
 global localList
 global historySet
 global browser
-global domainName
 global xiaoding
+global ymlFile
+global url
+global access_token
+
+if 'scan_url' in os.environ and  'scan_access_token' in os.environ:
+    access_token = os.environ['scan_access_token']
+else:
+    with open('./config.yml', 'r', encoding="utf-8") as f:
+         ymlFile = yaml.load(f.read(), Loader=yaml.FullLoader)
+    url = ymlFile['scan_url']
+    access_token = ymlFile['scan_access_token']
+
 # 初始化机器人小丁
-webhook = 'https://oapi.dingtalk.com/robot/send?access_token=3f69bd111a27ad41e6b609acb7b68d1f862d795c331840aa0d9a5abb9fbde223'  # 填写你自己创建的机器人
+webhook = 'https://oapi.dingtalk.com/robot/send?access_token={access_token}'.format(access_token=access_token)  # 填写你自己创建的机器人
 xiaoding = DingtalkChatbot(webhook)
 localList = []
 historySet = set()
@@ -35,7 +42,6 @@ def zidonghua_html_noproxy(url):
 def get_html(object):
     response = requests.get(object['cur'])
     if response.status_code != 200:
-
         xiaoding.send_text(msg='官网出现死链==> ' + object['cur'] + ' 源网页==> ' + object['refer'],is_at_all=True)  # Text消息@所有人
 
 
@@ -45,7 +51,7 @@ def get_html(object):
 
 def send_url_verification(object):
     # 只扫描自己的域名
-    if object['cur'].find(domainName) != -1:
+    if object['cur'].find(url) != -1:
 
         soup = get_html(object)
         aList = soup.select("a[href]")
@@ -99,14 +105,10 @@ def _remove_duplicate( dict_list):
 
 
 if __name__ == '__main__':
-    # domainName = 'www.cyzxs.cn'
-    domainName = 'www.cyzxn.cn'
-    pageUrl = 'http://' + domainName + '/'  # 需要查询的页面
+    pageUrl = 'http://{url}/'.format(url=url)  # 需要查询的页面
     object = {}
     object['refer'] = ''
     object['cur'] = pageUrl
     lis = send_url_verification(object)
-
     browser.quit()
-
     print("退出程序")
