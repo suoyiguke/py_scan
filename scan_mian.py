@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import sys
+import time
 
 from apscheduler.schedulers.blocking import BlockingScheduler
 
@@ -7,7 +8,7 @@ import logger
 log = logger.logger()
 log.debug('=================扫描程序开始==========================')
 sys.setrecursionlimit(1000000)
-
+time.sleep(20)
 import requests
 import yaml
 from bs4 import BeautifulSoup
@@ -25,6 +26,10 @@ global ymlFile
 global url
 global access_token
 
+
+localList = []
+historySet = set()
+
 if 'scan_url' in os.environ and  'scan_access_token' in os.environ:
     url = os.environ['scan_url']
     access_token = os.environ['scan_access_token']
@@ -33,19 +38,14 @@ else:
         ymlFile = yaml.load(f.read(), Loader=yaml.FullLoader)
     url = ymlFile['scan_url']
     access_token = ymlFile['scan_access_token']
-
-pageUrl = 'http://{url}/'.format(url=url)  # 需要查询的页面
-
 # 初始化机器人小丁
 webhook = 'https://oapi.dingtalk.com/robot/send?access_token={access_token}'.format(access_token=access_token)  # 填写你自己创建的机器人
 xiaoding = DingtalkChatbot(webhook)
-localList = []
-historySet = set()
 
 
 try:
     browser = webdriver.Remote(
-        command_executor="http://chrome:4444/wd/hub",
+        command_executor="http://chrome-scan:4444/wd/hub",
         desired_capabilities=DesiredCapabilities.CHROME
     )
 except BaseException as err:
@@ -74,9 +74,9 @@ def get_html(object):
         return BeautifulSoup(zidonghua_html_noproxy(object['cur']), 'lxml')
 
 
-def send_url_verification(object):
+def send_url_verification(s,pageUrl,object):
     # 只扫描自己的域名
-    if object['cur'].find(url) != -1:
+    if object['cur'].find(s) != -1:
         log.debug('扫描'+object['cur']+'中...'+'它的来源是'+ object['refer'])
         soup = get_html(object)
         aList = soup.select("a[href]")
@@ -104,7 +104,7 @@ def send_url_verification(object):
         for object_ in linkList:
             if object_['cur'] not in historySet:
                 historySet.add(object_['cur'])
-                send_url_verification(object_)
+                send_url_verification(s,pageUrl,object_)
 
 
 def has_ym(pageUrl, url):
@@ -127,11 +127,16 @@ def _remove_duplicate( dict_list):
 
 
 def main():
-    object = {}
-    object['refer'] = ''
-    object['cur'] = pageUrl
-    lis = send_url_verification(object)
-    # browser.quit()
+    split = url.split(',')
+    for s in split:
+        pageUrl = 'http://{url}/'.format(url=s)  # 需要查询的页面
+        object = {}
+        object['refer'] = ''
+        object['cur'] = pageUrl
+        lis = send_url_verification(s,pageUrl,object)
+        # browser.quit()
+        log.debug('================='+pageUrl+'结束==========================')
+
     log.debug('=================扫描程序结束==========================')
 
 
