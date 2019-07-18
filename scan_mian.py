@@ -8,7 +8,7 @@ import logger
 log = logger.logger()
 log.debug('=================扫描程序开始==========================')
 sys.setrecursionlimit(1000000)
-time.sleep(20)
+# time.sleep(10)
 import requests
 import yaml
 from bs4 import BeautifulSoup
@@ -18,17 +18,13 @@ from selenium import webdriver
 from selenium.webdriver import DesiredCapabilities
 
 global pageURL
-global localList
-global historySet
-global browser
+
 global xiaoding
 global ymlFile
 global url
 global access_token
 
 
-localList = []
-historySet = set()
 
 if 'scan_url' in os.environ and  'scan_access_token' in os.environ:
     url = os.environ['scan_url']
@@ -43,22 +39,11 @@ webhook = 'https://oapi.dingtalk.com/robot/send?access_token={access_token}'.for
 xiaoding = DingtalkChatbot(webhook)
 
 
-try:
-    browser = webdriver.Remote(
-        command_executor="http://chrome-scan:4444/wd/hub",
-        desired_capabilities=DesiredCapabilities.CHROME
-    )
-except BaseException as err:
-    log.error(err)
-    browser = webdriver.Chrome()
-
-finally:
-    log.error('请检查好Chrome环境！')
-
 
 
 # 不显示浏览器窗口的自动化爬取
 def zidonghua_html_noproxy(url):
+    time.sleep(1)
     browser.get(url)
     return browser.page_source
 
@@ -67,7 +52,7 @@ def zidonghua_html_noproxy(url):
 def get_html(object):
     response = requests.get(object['cur'])
     if response.status_code != 200:
-        xiaoding.send_text(msg='官网出现死链==> ' + object['cur'] + ' 源网页==> ' + object['refer'],is_at_all=True)  # Text消息@所有人
+        xiaoding.send_text(msg='官网出现死链==> ' + object['cur'] + ' 源网页==> ' + object['refer'])  # Text消息@所有人
 
 
     else:
@@ -127,6 +112,25 @@ def _remove_duplicate( dict_list):
 
 
 def main():
+    global browser
+    try:
+        browser = webdriver.Remote(
+            command_executor="http://chrome-scan:4444/wd/hub",
+            desired_capabilities=DesiredCapabilities.CHROME
+        )
+    except BaseException as err:
+        log.error(err)
+        browser = webdriver.Chrome()
+
+    finally:
+        log.error('请检查好Chrome环境！')
+
+    global localList
+    global historySet
+    localList = []
+    historySet = set()
+
+
     split = url.split(',')
     for s in split:
         pageUrl = 'http://{url}/'.format(url=s)  # 需要查询的页面
@@ -134,17 +138,24 @@ def main():
         object['refer'] = ''
         object['cur'] = pageUrl
         lis = send_url_verification(s,pageUrl,object)
-        # browser.quit()
         log.debug('================='+pageUrl+'结束==========================')
 
+    browser.quit()
     log.debug('=================扫描程序结束==========================')
 
 
 
 if __name__ == '__main__':
-    sched = BlockingScheduler()
-    #4小时
-    main()
-    sched.add_job(main,'interval',  seconds=14400)
-    sched.start()
+
+    try:
+        sched = BlockingScheduler()
+        # 4小时
+        main()
+        sched.add_job(main, 'interval', seconds=14400)
+        sched.start()
+
+    except BaseException as err:
+        log.error(err)
+        browser.quit()
+
 
