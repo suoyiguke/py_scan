@@ -8,7 +8,8 @@ import logger
 log = logger.logger()
 log.debug('=================扫描程序开始==========================')
 sys.setrecursionlimit(1000000)
-# time.sleep(10)
+#等待谷歌镜像启动完毕
+time.sleep(10)
 import requests
 import yaml
 from bs4 import BeautifulSoup
