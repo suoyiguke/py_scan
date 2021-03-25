@@ -3,6 +3,6 @@ requests==2.21.0
 gevent==1.4.0
 selenium==3.141.0
 beautifulsoup4==4.7.1
-PyYAML==5.1.1
+PyYAML==5.4
 lxml
 apscheduler
